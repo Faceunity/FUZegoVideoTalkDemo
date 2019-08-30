@@ -23,14 +23,13 @@ import android.widget.Toast;
 import com.pgyersdk.update.PgyUpdateManager;
 import com.zego.videotalk.ui.activities.SettingsActivity;
 import com.zego.videotalk.ui.activities.VideoTalkActivity;
+import com.zego.videotalk.utils.SystemUtil;
 
 public class MainActivity extends AppCompatActivity {
 
     static final private int OPEN_SETTINGS_CODE = 1;
     static final private int REQUEST_PERMISSION_CODE = 101;
-    private static String[] PERMISSIONS_STORAGE = {
-            "android.permission.READ_EXTERNAL_STORAGE",
-            "android.permission.WRITE_EXTERNAL_STORAGE", Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
+
     private Toolbar mToolbar;
     private EditText mSessionIDEditText;
     private Button mStartButton;
@@ -38,6 +37,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (!isTaskRoot()) {
+            /* If this is not the root activity */
+            Intent intent = getIntent();
+            String action = intent.getAction();
+            if (intent.hasCategory(Intent.CATEGORY_LAUNCHER) && Intent.ACTION_MAIN.equals(action)) {
+                finish();
+                return;
+            }
+        }
+
         setContentView(R.layout.activity_main);
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
@@ -76,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        if (checkOrRequestPermission(1002)) {
+        if (checkOrRequestPermission(1002) && !SystemUtil.isDebugVersion(this)) {
 
             /** 可选配置集成方式 **/
             new PgyUpdateManager.Builder()
@@ -93,6 +102,10 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
+
+    private static String[] PERMISSIONS_STORAGE = {
+            "android.permission.READ_EXTERNAL_STORAGE",
+            "android.permission.WRITE_EXTERNAL_STORAGE", Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
 
     private boolean checkOrRequestPermission(int code) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -167,6 +180,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void gotoVideoTalk() {
+        // 设置app朝向
+        int currentOrientation = getWindowManager().getDefaultDisplay().getRotation();
+        ZegoAppHelper.getLiveRoom().setAppOrientation(currentOrientation);
 
         String sessionID = mSessionIDEditText.getText().toString();
         if (sessionID.contains(" ")) {
@@ -177,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
             // 将sessionID传给下一个页面
             Intent intent = new Intent(MainActivity.this, VideoTalkActivity.class);
             intent.putExtra("sessionId", sessionID.trim());
+            intent.putExtra("orientation", currentOrientation);
             startActivity(intent);
         } else {
             Toast.makeText(this, R.string.vt_hint_input_session_id, Toast.LENGTH_LONG).show();

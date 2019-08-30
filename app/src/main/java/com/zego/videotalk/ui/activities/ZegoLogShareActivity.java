@@ -8,6 +8,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.text.TextUtils;
 import android.util.Log;
 
+
 import com.zego.videotalk.R;
 import com.zego.videotalk.adapter.LogListAdapter;
 import com.zego.videotalk.ui.activities.base.AbsBaseActivity;
@@ -28,19 +29,15 @@ import butterknife.OnClick;
 
 public class ZegoLogShareActivity extends AbsBaseActivity {
 
-    @Bind(R.id.recyclerView)
-    android.support.v7.widget.RecyclerView recyclerView;
     private LinkedList<String> mDatas;
-
-    public static void actionStart(Activity activity) {
-        Intent intent = new Intent(activity, ZegoLogShareActivity.class);
-        activity.startActivity(intent);
-    }
-
     @Override
     protected int getContentViewLayout() {
         return R.layout.activity_log_share_zego;
     }
+
+    @Bind(R.id.recyclerView)
+    android.support.v7.widget.RecyclerView recyclerView;
+
 
     @Override
     protected void initExtraData(Bundle savedInstanceState) {
@@ -53,8 +50,8 @@ public class ZegoLogShareActivity extends AbsBaseActivity {
             }
         });
 
-        List<String> arrayList = Arrays.asList(fileName);
-        mDatas = new LinkedList(arrayList);
+       List<String> arrayList=Arrays.asList(fileName);
+       mDatas = new LinkedList(arrayList);
     }
 
     @Override
@@ -99,5 +96,11 @@ public class ZegoLogShareActivity extends AbsBaseActivity {
             Log.w("ZegoLogShareActivity ", "not found any log files.");
         }
 
+    }
+
+
+    public static void actionStart(Activity activity) {
+        Intent intent = new Intent(activity, ZegoLogShareActivity.class);
+        activity.startActivity(intent);
     }
 }

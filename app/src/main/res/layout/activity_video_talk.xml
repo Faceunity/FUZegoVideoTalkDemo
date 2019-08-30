@@ -25,7 +25,7 @@
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="45dp"
         android:layout_marginEnd="12dp"
         android:layout_marginRight="12dp"
         android:padding="6dp">
@@ -73,19 +73,16 @@
         </LinearLayout>
     </RelativeLayout>
 
-    <GridView
+    <android.support.v7.widget.RecyclerView
         android:id="@+id/vt_normal_video_window_set"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_marginLeft="6dp"
         android:layout_marginRight="6dp"
-        android:layout_marginBottom="6dp"
-        android:columnWidth="@dimen/vt_video_live_item_width"
-        android:numColumns="auto_fit"
-        android:stretchMode="columnWidth">
+        android:layout_marginBottom="6dp">
 
-    </GridView>
+    </android.support.v7.widget.RecyclerView>
 
     <TextView
         android:id="@+id/tv_track_text"
@@ -94,13 +91,14 @@
         android:layout_centerInParent="true"
         android:text="没有检测到人脸"
         android:textColor="#ffffff"
-        android:textSize="@dimen/text_size_36"
+        android:textSize="18sp"
         android:visibility="invisible" />
 
-    <com.faceunity.ui.BeautyControlView
+    <com.faceunity.beautycontrolview.BeautyControlView
         android:id="@+id/faceunity_control"
         android:layout_width="match_parent"
         android:layout_height="@dimen/x98"
         android:layout_alignParentBottom="true" />
+
 
 </RelativeLayout>

@@ -1,7 +1,5 @@
 package com.zego.videotalk.utils;
 
-import android.util.Log;
-
 import java.util.LinkedList;
 
 /**
@@ -41,7 +39,6 @@ public class AppLogger {
 
         mLogList.addFirst(String.format("%s %s", TimeUtil.getLogStr(), message));
         PrefUtil.getInstance().setLogData(mLogList);
-        Log.d("AppLogger", message);
     }
 
     public LinkedList<String> getAllLog() {

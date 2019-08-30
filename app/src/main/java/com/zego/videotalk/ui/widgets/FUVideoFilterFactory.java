@@ -3,7 +3,7 @@ package com.zego.videotalk.ui.widgets;
 import android.graphics.SurfaceTexture;
 import android.util.Log;
 
-import com.faceunity.FURenderer;
+import com.faceunity.beautycontrolview.FURenderer;
 import com.zego.zegoavkit2.videofilter.ZegoVideoFilter;
 import com.zego.zegoavkit2.videofilter.ZegoVideoFilterFactory;
 
@@ -87,7 +87,7 @@ public class FUVideoFilterFactory extends ZegoVideoFilterFactory {
         @Override
         protected void onProcessCallback(int i, int i1, int i2, long l) {
             Log.d(TAG, "onProcessCallback: tex:" + i + ", width:" + i1 + ", height:" + i2);
-            int textureId = mFURenderer.onDrawFrame(i, i1, i2);
+            int textureId = mFURenderer.onDrawFrameSingleInputTex(i, i1, i2);
             mClient.onProcessCallback(textureId, i1, i2, l);
         }
     }

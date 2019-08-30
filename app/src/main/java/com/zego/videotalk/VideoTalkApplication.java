@@ -3,18 +3,21 @@ package com.zego.videotalk;
 import android.app.Application;
 import android.os.Build;
 import android.text.TextUtils;
-import android.util.Log;
 import android.widget.Toast;
 
-import com.faceunity.FURenderer;
-import com.faceunity.utils.EffectEnum;
+import com.faceunity.beautycontrolview.FURenderer;
 import com.tencent.bugly.crashreport.CrashReport;
 import com.zego.videotalk.ui.widgets.FUVideoFilterFactory;
 import com.zego.videotalk.utils.PrefUtil;
+import com.zego.videotalk.utils.PreferenceUtil;
+import com.zego.videotalk.utils.SystemUtil;
 import com.zego.videotalk.utils.TimeUtil;
 import com.zego.zegoliveroom.ZegoLiveRoom;
 import com.zego.zegoliveroom.constants.ZegoAvConfig;
 import com.zego.zegoliveroom.constants.ZegoConstants;
+
+import static com.zego.zegoliveroom.constants.ZegoConstants.Config.VIDEO_ACCELERATOR_WHITELIST;
+
 
 /**
  * <p>Copyright © 2017 Zego. All rights reserved.</p>
@@ -23,11 +26,14 @@ import com.zego.zegoliveroom.constants.ZegoConstants;
  */
 
 public class VideoTalkApplication extends Application {
-    private static final String TAG = "VideoTalkApplication";
-    final static private long DEFAULT_ZEGO_APP_ID = 1721677906;
-    final static private String BUGLY_APP_KEY = "0xad,0xb8,0x22,0x75,0xf4,0x1f,0xb4,0x1b,0xd8,0x59,0x7c,0xc7,0x66,0xdf,0x52,0x7c,0xfb,0x6e,0xd4,0xe4,0xd6,0xd7,0xf3,0x64,0xbd,0xf8,0x15,0x92,0x07,0x61,0x60,0xfa";
+
     static private VideoTalkApplication sInstance;
+
+    final static private long DEFAULT_ZEGO_APP_ID = ZegoAppHelper.UDP_APP_ID;
+
+    final static private String BUGLY_APP_KEY = "70580e12bb";
     private FURenderer mFURenderer;
+    private String isOpen;
 
     static public VideoTalkApplication getAppContext() {
         return VideoTalkApplication.sInstance;
@@ -52,13 +58,16 @@ public class VideoTalkApplication extends Application {
 
         initCrashReport();  // second
 
-
-        FURenderer.initFURenderer(this);
-        mFURenderer = new FURenderer
-                .Builder(this)
-                .inputTextureType(0)
-                .defaultEffect(EffectEnum.Effect_fengya_ztt_fu.effect())
-                .build();
+        isOpen = PreferenceUtil.getString(this, PreferenceUtil.KEY_FACEUNITY_ISON);
+        if (TextUtils.isEmpty(isOpen)) {
+            isOpen = "false";
+        }
+        if (isOpen.equals("true")) {
+            FURenderer.initFURenderer(this);
+            mFURenderer = new FURenderer
+                    .Builder(this)
+                    .build();
+        }
         setupZegoSDK();  // last
     }
 
@@ -83,7 +92,7 @@ public class VideoTalkApplication extends Application {
 
         ZegoLiveRoom liveRoom = ZegoAppHelper.getLiveRoom();
 
-        liveRoom.setSDKContext(new ZegoLiveRoom.SDKContext() {
+        ZegoLiveRoom.setSDKContext(new ZegoLiveRoom.SDKContext() {
             @Override
             public String getSoFullPath() {
                 return null;
@@ -107,6 +116,8 @@ public class VideoTalkApplication extends Application {
         ZegoAppHelper.saveLiveRoom(liveRoom);
     }
 
+    public ZegoAvConfig config;
+
     private void initZegoSDK(ZegoLiveRoom liveRoom) {
 
         ZegoLiveRoom.setUser(PrefUtil.getInstance().getUserId(), PrefUtil.getInstance().getUserName());
@@ -114,16 +125,18 @@ public class VideoTalkApplication extends Application {
         ZegoLiveRoom.requireHardwareDecoder(PrefUtil.getInstance().getHardwareDecode());
         ZegoLiveRoom.setTestEnv(PrefUtil.getInstance().getTestEncode());
         //设置外部滤镜---必须在初始化ZegoSDK的时候设置，否则不会回调
-        FUVideoFilterFactory fuVideoFilterFactory = new FUVideoFilterFactory(mFURenderer);
-        ZegoLiveRoom.setVideoFilterFactory(fuVideoFilterFactory);
+        if (mFURenderer != null) {
+            FUVideoFilterFactory fuVideoFilterFactory = new FUVideoFilterFactory(mFURenderer);
+            ZegoLiveRoom.setVideoFilterFactory(fuVideoFilterFactory);
+        }
         byte[] signKey;
         long appId = 0;
         String strSignKey;
         int currentAppFlavor = PrefUtil.getInstance().getCurrentAppFlavor();
-        if (currentAppFlavor == 2) {
-
+        if (currentAppFlavor == 3) {
             appId = PrefUtil.getInstance().getAppId();
             strSignKey = PrefUtil.getInstance().getAppSignKey();
+
         } else {
             switch (currentAppFlavor) {
                 case 0:
@@ -132,34 +145,38 @@ public class VideoTalkApplication extends Application {
                 case 1:
                     appId = ZegoAppHelper.INTERNATIONAL_APP_ID;
                     break;
-                default:
+                case 2:
+                    appId = ZegoAppHelper.UDP_APP_ID;
+                    PrefUtil.getInstance().setAppWebRtc(true);
+                    break;
             }
             signKey = ZegoAppHelper.requestSignKey(appId);
             strSignKey = ZegoAppHelper.convertSignKey2String(signKey);
         }
 
+
         if (appId == 0 || TextUtils.isEmpty(strSignKey)) {
             appId = DEFAULT_ZEGO_APP_ID;
-            PrefUtil.getInstance().setAppId(DEFAULT_ZEGO_APP_ID);
-
-            strSignKey = BUGLY_APP_KEY;
-            signKey = ZegoAppHelper.parseSignKeyFromString(strSignKey);
-            PrefUtil.getInstance().setAppSignKey(strSignKey);
-            Log.d(TAG, "initZegoSDK: strSignKey:" + strSignKey + ", appId:" + appId);
+            signKey = ZegoAppHelper.requestSignKey(DEFAULT_ZEGO_APP_ID);
         } else {
             signKey = ZegoAppHelper.parseSignKeyFromString(strSignKey);
         }
 
+        // 设置视频通话类型
+        ZegoLiveRoom.setBusinessType(PrefUtil.getInstance().getBusinessType());
+
         boolean success = liveRoom.initSDK(appId, signKey);
 
-        if (PrefUtil.getInstance().getAppWebRtc()) {
-            liveRoom.setLatencyMode(ZegoConstants.LatencyMode.Low3);
-        }
+        liveRoom.setLatencyMode(ZegoConstants.LatencyMode.Low3);
+
 
         if (!success) {
             Toast.makeText(this, R.string.vt_toast_init_sdk_failed, Toast.LENGTH_LONG).show();
         } else {
-            ZegoAvConfig config;
+
+            int height = 0;
+            int width = 0;
+
             int level = PrefUtil.getInstance().getLiveQuality();
             if (level < 0 || level > ZegoAvConfig.Level.SuperHigh) {
                 config = new ZegoAvConfig(ZegoAvConfig.Level.High);
@@ -169,16 +186,15 @@ public class VideoTalkApplication extends Application {
 
                 String resolutionText = getResources().getStringArray(R.array.zg_resolutions)[resolutionLevel];
                 String[] strWidthHeight = resolutionText.split("x");
-
-                int height = Integer.parseInt(strWidthHeight[0].trim());
-                int width = Integer.parseInt(strWidthHeight[1].trim());
+                height = Integer.parseInt(strWidthHeight[0].trim());
+                width = Integer.parseInt(strWidthHeight[1].trim());
                 config.setVideoEncodeResolution(width, height);
                 config.setVideoCaptureResolution(width, height);
+
             } else {
                 config = new ZegoAvConfig(level);
             }
             liveRoom.setAVConfig(config);
-
         }
 
 

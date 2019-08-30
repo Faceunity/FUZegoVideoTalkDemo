@@ -3,11 +3,18 @@ package com.zego.videotalk.utils;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
+import android.widget.Toast;
+
+
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Copyright © 2016 Zego. All rights reserved.
@@ -30,6 +37,7 @@ public class ShareUtils {
 
         return sInstance;
     }
+
 
 
     static final public void sendFiles(File[] fileList, Activity activity) {

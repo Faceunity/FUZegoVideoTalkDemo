@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.zego.videotalk">
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -29,7 +30,8 @@
         android:label="@string/vt_app_name"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+        tools:replace="label">
 
         <!-- 必选-->
         <meta-data
@@ -42,9 +44,9 @@
             android:exported="false" />
 
         <activity
-            android:name=".MainActivity"
-            android:label="@string/vt_app_name"
-            android:screenOrientation="portrait">
+            android:name=".NeedFaceUnityAcct"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:label="@string/vt_app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -52,21 +54,23 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".MainActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:label="@string/vt_app_name"
+            android:launchMode="singleTop"></activity>
+        <activity
             android:name=".ui.activities.SettingsActivity"
-            android:label="@string/vt_title_activity_settings"
-            android:screenOrientation="portrait"></activity>
+            android:label="@string/vt_title_activity_settings" />
         <activity
             android:name=".ui.activities.LogActivity"
-            android:label="@string/vt_title_activity_log"
-            android:screenOrientation="portrait"></activity>
+            android:label="@string/vt_title_activity_log" />
         <activity
             android:name=".ui.activities.VideoTalkActivity"
-            android:label="@string/vt_title_activity_talk"
-            android:screenOrientation="portrait"></activity>
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="@string/vt_title_activity_talk" />
         <activity
             android:name=".ui.activities.ZegoLogShareActivity"
-            android:label="@string/vt_title_activity_talk"
-            android:screenOrientation="portrait"></activity>
+            android:label="@string/vt_title_activity_talk" />
     </application>
 
 </manifest>

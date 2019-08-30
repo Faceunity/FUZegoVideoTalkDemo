@@ -3,6 +3,7 @@ package com.zego.videotalk.ui.widgets;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
+import android.widget.SeekBar;
 
 /**
  * des: 自定义seekbar, 解决滑动冲突的问题.

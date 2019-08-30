@@ -1,27 +1,21 @@
 package com.zego.videotalk.adapter;
 
 import android.app.Activity;
+import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
-import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
-import android.widget.GridView;
 
 import com.zego.videotalk.R;
 import com.zego.videotalk.ZegoAppHelper;
 import com.zego.videotalk.ui.widgets.VideoLiveView;
 import com.zego.videotalk.utils.PrefUtil;
-import com.zego.zegoliveroom.ZegoLiveRoom;
 import com.zego.zegoliveroom.constants.ZegoVideoViewMode;
 import com.zego.zegoliveroom.entity.ZegoStreamInfo;
-import com.zego.zegoliveroom.entity.ZegoStreamQuality;
 
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,13 +24,18 @@ import java.util.Map;
  * @author realuei on 26/10/2017.
  */
 
-public class VideoLiveViewAdapter extends BaseAdapter {
+public class VideoLiveViewAdapter extends RecyclerView.Adapter {
 
     private SoftReference<Activity> mParentReference;
     private ArrayList<ZegoStreamInfo> mStreamList;
-    private Map<String, ZegoStreamQuality> mQualityMap;
+    private Map<String, CommonStreamQuality> mQualityMap;
     private int mItemWidth = 0;
-    volatile private List<View> videoLiveViewList = new ArrayList<>();
+    private OnItemClickListener onItemClickListener;
+
+
+    public void setOnItemClickListener(OnItemClickListener onItemClickListener) {
+        this.onItemClickListener = onItemClickListener;
+    }
 
     public VideoLiveViewAdapter(Activity activity) {
         mParentReference = new SoftReference<>(activity);
@@ -51,32 +50,80 @@ public class VideoLiveViewAdapter extends BaseAdapter {
         }
     }
 
-    public synchronized void put(String key, ZegoStreamQuality value) {
+    public synchronized void put(String key, CommonStreamQuality value) {
         if (mQualityMap != null) {
             mQualityMap.put(key, value);
         }
     }
 
-    /**
-     * How many items are in the data set represented by this Adapter.
-     *
-     * @return Count of items.
-     */
+
     @Override
-    public int getCount() {
-        return mStreamList.size();
+    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        VideoLiveView convertView = new VideoLiveView(parent.getContext(), false);
+        RecyclerView.LayoutParams params = new RecyclerView.LayoutParams(mItemWidth, mItemWidth * 16 / 9);
+        convertView.setLayoutParams(params);
+        MyViewHolder viewHolder = new MyViewHolder(convertView);
+        return viewHolder;
     }
 
-    /**
-     * Get the data item associated with the specified position in the data set.
-     *
-     * @param position Position of the item whose data we want within the adapter's
-     *                 data set.
-     * @return The data at the specified position.
-     */
     @Override
-    public Object getItem(int position) {
+    public void onBindViewHolder(RecyclerView.ViewHolder holder, final int position) {
+
+        final VideoLiveView liveView = ((MyViewHolder) holder).itemView;
+
+        final ZegoStreamInfo streamInfo = mStreamList.get(position);
+        if (TextUtils.isEmpty(streamInfo.userID) || TextUtils.equals(streamInfo.userID, PrefUtil.getInstance().getUserId())) {
+            if (zegoMapView.get(streamInfo.streamID) == null || zegoMapView.get(streamInfo.streamID) != liveView.getTextureView().getId()) {
+                // preview
+                ZegoAppHelper.getLiveRoom().setPreviewView(liveView.getTextureView());
+                ZegoAppHelper.getLiveRoom().setPreviewViewMode(ZegoVideoViewMode.ScaleAspectFit);
+            }
+        } else {
+            if (zegoMapView.get(streamInfo.streamID) == null || zegoMapView.get(streamInfo.streamID) != liveView.getTextureView().getId()) {
+                // play
+                ZegoAppHelper.getLiveRoom().updatePlayView(streamInfo.streamID, liveView.getTextureView());
+                ZegoAppHelper.getLiveRoom().setViewMode(ZegoVideoViewMode.ScaleAspectFit, streamInfo.streamID);
+
+            }
+        }
+
+        liveView.setTag(R.id.view_video, position);
+
+        liveView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (onItemClickListener != null) {
+                    onItemClickListener.onItemClick(v, (int) v.getTag(R.id.view_video));
+                }
+            }
+        });
+
+        zegoMapView.put(streamInfo.streamID, liveView.getTextureView().getId());
+        CommonStreamQuality commonStreamQuality = mQualityMap.get(streamInfo.streamID);
+        if (commonStreamQuality != null) {
+
+            liveView.setLiveQuality(commonStreamQuality.quality, commonStreamQuality.videoFps, commonStreamQuality.vkbps, commonStreamQuality.rtt, commonStreamQuality.pktLostRate);
+
+        }
+
+    }
+
+    public interface OnItemClickListener {
+        void onItemClick(View v, int position);
+    }
+
+    public synchronized Object getItem(int position) {
         return mStreamList.get(position);
+    }
+
+    public static class MyViewHolder extends RecyclerView.ViewHolder {
+        VideoLiveView itemView;
+
+        public MyViewHolder(VideoLiveView itemView) {
+            super(itemView);
+            this.itemView = itemView;
+
+        }
     }
 
     /**
@@ -90,55 +137,12 @@ public class VideoLiveViewAdapter extends BaseAdapter {
         return position;
     }
 
-    /**
-     * Get a View that displays the data at the specified position in the data set. You can either
-     * create a View manually or inflate it from an XML layout file. When the View is inflated, the
-     * parent View (GridView, ListView...) will apply default layout parameters unless you use
-     * {@link LayoutInflater#inflate(int, ViewGroup, boolean)}
-     * to specify a root view and to prevent attachment to the root.
-     *
-     * @param position    The position of the item within the adapter's data set of the item whose view
-     *                    we want.
-     * @param convertView The old view to reuse, if possible. Note: You should check that this view
-     *                    is non-null and of an appropriate type before using. If it is not possible to convert
-     *                    this view to display the correct data, this method can create a new view.
-     *                    Heterogeneous lists can specify their number of view types, so that this View is
-     *                    always of the right type (see {@link #getViewTypeCount()} and
-     *                    {@link #getItemViewType(int)}).
-     * @param parent      The parent that this view will eventually be attached to
-     * @return A View corresponding to the data at the specified position.
-     */
     @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
-        if (convertView == null) {
-            convertView = new VideoLiveView(parent.getContext(), false);
-            GridView.LayoutParams params = new GridView.LayoutParams(mItemWidth, mItemWidth * 16 / 9);
-            convertView.setLayoutParams(params);
-        }
-
-        VideoLiveView liveView = (VideoLiveView) convertView;
-
-        ZegoLiveRoom liveRoom = ZegoAppHelper.getLiveRoom();
-        ZegoStreamInfo streamInfo = mStreamList.get(position);
-        if (TextUtils.isEmpty(streamInfo.userID) || TextUtils.equals(streamInfo.userID, PrefUtil.getInstance().getUserId())) {
-            // preview
-            liveRoom.setPreviewView(liveView.getTextureView());
-            liveRoom.setPreviewViewMode(ZegoVideoViewMode.ScaleAspectFit);
-        } else {
-            // play
-            liveRoom.updatePlayView(streamInfo.streamID, liveView.getTextureView());
-            liveRoom.setViewMode(ZegoVideoViewMode.ScaleAspectFit, streamInfo.streamID);
-        }
-
-        ZegoStreamQuality zegoStreamQuality = mQualityMap.get(streamInfo.streamID);
-        if (zegoStreamQuality != null) {
-
-            liveView.setLiveQuality(zegoStreamQuality.quality, zegoStreamQuality.videoFPS, zegoStreamQuality.videoBitrate, zegoStreamQuality.rtt, zegoStreamQuality.pktLostRate);
-
-        }
-
-        return convertView;
+    public int getItemCount() {
+        return mStreamList.size();
     }
+
+    volatile Map<String, Integer> zegoMapView = new HashMap<>();
 
     public synchronized void setData(final ZegoStreamInfo[] streamList) {
         mStreamList.clear();
@@ -159,8 +163,7 @@ public class VideoLiveViewAdapter extends BaseAdapter {
     }
 
     public synchronized void removeStream(String streamId) {
-        if (TextUtils.isEmpty(streamId))
-            return;
+        if (TextUtils.isEmpty(streamId)) return;
 
         ZegoStreamInfo deleteStream = null;
         for (ZegoStreamInfo streamInfo : mStreamList) {
@@ -182,9 +185,8 @@ public class VideoLiveViewAdapter extends BaseAdapter {
     }
 
     public synchronized ZegoStreamInfo replace(final ZegoStreamInfo newStream, int position) {
-        Log.e("====", "pro" + position);
-        if (position < 0 || position >= mStreamList.size())
-            return null;
+
+        if (position < 0 || position >= mStreamList.size()) return null;
 
         ZegoStreamInfo oldStream = mStreamList.remove(position);
         remove(oldStream.streamID);
@@ -194,34 +196,40 @@ public class VideoLiveViewAdapter extends BaseAdapter {
         _newStream.userName = newStream.userName;
         _newStream.extraInfo = newStream.extraInfo;
         mStreamList.add(position, _newStream);
-
+        zegoMapView.clear();
         notifyRefreshUI();
         return oldStream;
     }
 
-    public void notifyDataSetChanged() {
-        videoLiveViewList.clear();
-        super.notifyDataSetChanged();
-    }
 
     private void notifyRefreshUI() {
-        if (mParentReference == null && mParentReference.get() != null)
-            return;
+
+        if (mParentReference == null && mParentReference.get() != null) return;
 
         final Activity parent = mParentReference.get();
-        parent.findViewById(android.R.id.content).postDelayed(new Runnable() {
+        parent.findViewById(android.R.id.content).post(new Runnable() {
             @Override
             public void run() {
                 if (!parent.isFinishing()) {
                     notifyDataSetChanged();
                 }
             }
-        }, 1000);
+        });
     }
 
-    public synchronized void onPlayQualityUpdate(String streamId, final ZegoStreamQuality zegoStreamQuality) {
-        put(streamId, zegoStreamQuality);
+    public synchronized void onPlayQualityUpdate(String streamId, final CommonStreamQuality commonStreamQuality) {
+        put(streamId, commonStreamQuality);
         notifyRefreshUI();
+    }
 
+    public static class CommonStreamQuality {
+        public double audioFps;
+        public double videoFps;
+        public double vkbps;
+        public int rtt;
+        public int pktLostRate;
+        public int quality;
+        public int width;
+        public int height;
     }
 }

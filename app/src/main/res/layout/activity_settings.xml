@@ -31,13 +31,47 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_margin="@dimen/dimen_10"
+                android:onClick="scan"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@mipmap/qr_code" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/dimen_10"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/zg_scan_qr_code_setting"
+                        android:textSize="@dimen/text_size_7"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/zg_scan_qr_code_setting_text" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="10dp">
 
                 <TextView
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
-                    android:paddingTop="4dp"
                     android:paddingBottom="4dp"
+                    android:paddingTop="4dp"
                     android:text="@string/zg_text_user_id" />
 
                 <EditText
@@ -54,8 +88,8 @@
                 <TextView
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
-                    android:paddingTop="4dp"
                     android:paddingBottom="4dp"
+                    android:paddingTop="4dp"
                     android:text="@string/zg_text_user_name" />
 
                 <EditText
@@ -243,7 +277,7 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentLeft="true"
                     android:layout_centerVertical="true"
-                    android:text="@string/zg_checkbox_use_hardware_encode" />
+                    android:text="@string/hardware_encode" />
 
                 <CheckBox
                     android:id="@+id/zg_checkbox_user_hardware_encode"
@@ -264,7 +298,7 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentLeft="true"
                     android:layout_centerVertical="true"
-                    android:text="@string/zg_checkbox_use_hardware_decode" />
+                    android:text="@string/hardware_decode" />
 
                 <CheckBox
                     android:id="@+id/zg_checkbox_hardware_decode"
@@ -304,8 +338,8 @@
                 <TextView
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
-                    android:paddingTop="4dp"
                     android:paddingBottom="4dp"
+                    android:paddingTop="4dp"
                     android:text="@string/zg_text_demo_version" />
 
                 <TextView
@@ -322,8 +356,8 @@
                 <TextView
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
-                    android:paddingTop="4dp"
                     android:paddingBottom="4dp"
+                    android:paddingTop="4dp"
                     android:text="@string/zg_text_ve_version" />
 
                 <TextView

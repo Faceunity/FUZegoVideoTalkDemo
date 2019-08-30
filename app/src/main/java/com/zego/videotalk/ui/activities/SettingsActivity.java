@@ -1,8 +1,13 @@
 package com.zego.videotalk.ui.activities;
 
-import android.os.Bundle;
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
 import android.support.v7.widget.AppCompatSeekBar;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
@@ -17,9 +22,13 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.alibaba.fastjson.JSONObject;
+import com.dommy.qrcode.util.Constant;
+import com.google.zxing.activity.CaptureActivity;
 import com.zego.videotalk.R;
 import com.zego.videotalk.VideoTalkApplication;
 import com.zego.videotalk.ZegoAppHelper;
+import com.zego.videotalk.entity.AppConfig;
 import com.zego.videotalk.ui.widgets.CustomSeekBar;
 import com.zego.videotalk.utils.ByteSizeUnit;
 import com.zego.videotalk.utils.PrefUtil;
@@ -27,20 +36,23 @@ import com.zego.videotalk.utils.SystemUtil;
 import com.zego.zegoliveroom.ZegoLiveRoom;
 import com.zego.zegoliveroom.constants.ZegoAvConfig;
 
+
 public class SettingsActivity extends AppCompatActivity {
 
-    boolean shouldReInitSDK = false;
     private EditText mUserNameView;
     private Spinner mAppFlavorView;
     private Spinner mLayeredCoding;
     private EditText mAppIdView;
     private EditText mAppSignKeyView;
     private LinearLayout mAppSignKeyLayout;
+
     private Spinner mLiveQualityView;
     private TextView mResolutionDescView;
     private CustomSeekBar mResolutionView;
+
     private TextView mFPSDescView;
     private CustomSeekBar mFPSView;
+
     private TextView mBitrateDescView;
     private CustomSeekBar mBitrateView;
     private TextView userIdView;
@@ -48,75 +60,8 @@ public class SettingsActivity extends AppCompatActivity {
     private CheckBox mHardwareDecodeView;
     private CheckBox mTestEncodeView;
     private TextView tvDemoVersion;
+
     private String[] mResolutionText;
-    private AdapterView.OnItemSelectedListener mItemSelectedListener = new AdapterView.OnItemSelectedListener() {
-
-        /**
-         * <p>Callback method to be invoked when an item in this view has been
-         * selected. This callback is invoked only when the newly selected
-         * position is different from the previously selected position or if
-         * there was no selected item.</p>
-         * <p>
-         * Impelmenters can call getItemAtPosition(position) if they need to access the
-         * data associated with the selected item.
-         *
-         * @param parent   The AdapterView where the selection happened
-         * @param view     The view within the AdapterView that was clicked
-         * @param position The position of the view in the adapter
-         * @param id       The row id of the item that is selected
-         */
-        @Override
-        public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-            switch (parent.getId()) {
-                case R.id.sp_app_flavor:
-                    changeAppFlavor(position);
-                    break;
-
-                case R.id.sp_resolutions:
-                    changeResolution(position);
-                    break;
-            }
-        }
-
-        /**
-         * Callback method to be invoked when the selection disappears from this
-         * view. The selection can disappear for instance when touch is activated
-         * or when the adapter becomes empty.
-         *
-         * @param parent The AdapterView that now contains no selected item.
-         */
-        @Override
-        public void onNothingSelected(AdapterView<?> parent) {
-
-        }
-    };
-    private AppCompatSeekBar.OnSeekBarChangeListener mSeekBarChangeListener = new AppCompatSeekBar.OnSeekBarChangeListener() {
-        @Override
-        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-            switch (seekBar.getId()) {
-                case R.id.sb_resolution:
-                    mResolutionDescView.setText(getString(R.string.resolution_prefix, mResolutionText[progress]));
-                    break;
-
-                case R.id.sb_fps:
-                    mFPSDescView.setText(getString(R.string.fps_prefix, progress + ""));
-                    break;
-
-                case R.id.sb_bitrate:
-                    mBitrateDescView.setText(getString(R.string.bitrate_prefix, ByteSizeUnit.toHumanString(progress, ByteSizeUnit.RADIX_TYPE.K, 2)) + "ps");
-                    break;
-            }
-        }
-
-        @Override
-        public void onStartTrackingTouch(SeekBar seekBar) {
-        }
-
-        @Override
-        public void onStopTrackingTouch(SeekBar seekBar) {
-
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -133,6 +78,65 @@ public class SettingsActivity extends AppCompatActivity {
 
         initCtrls();
     }
+
+    private final static int REQ_CODE = 1028;
+
+    public void scan(View view) {
+        if (checkOrRequestPermission(REQUEST_PERMISSION_CODE)) {
+            startActivityForResult(new Intent(this, CaptureActivity.class), REQ_CODE);
+        }
+    }
+
+    private final int REQUEST_PERMISSION_CODE = 0506;
+
+    private static String[] PERMISSIONS_STORAGE = {
+            "android.permission.READ_EXTERNAL_STORAGE",
+            "android.permission.WRITE_EXTERNAL_STORAGE", Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
+
+    private boolean checkOrRequestPermission(int code) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+                    || ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE") != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE") != PackageManager.PERMISSION_GRANTED) {
+                this.requestPermissions(PERMISSIONS_STORAGE, code);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    AppConfig appConfig = null;
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_CODE && data != null && resultCode == RESULT_OK) {
+            Bundle bundle = data.getExtras();
+            String result = bundle.getString(Constant.INTENT_EXTRA_KEY_QR_SCAN);
+            if (result != null) {
+                try {
+                    JSONObject jsonObject = JSONObject.parseObject(result);
+                    if ("ac".equals(jsonObject.getString("type"))) {
+                        appConfig = jsonObject.getObject("data", AppConfig.class);
+                        PrefUtil.getInstance().setAppId(appConfig.appid);
+                        PrefUtil.getInstance().setAppSignKey(appConfig.appkey);
+                        PrefUtil.getInstance().setTestEncode(appConfig.isTestenv());
+                        PrefUtil.getInstance().setBusinessType(appConfig.getBusinesstype());
+                        PrefUtil.getInstance().setInternational(appConfig.isI18n());
+                        PrefUtil.getInstance().setAppFlavor(3);
+                        setResult(RESULT_OK);
+                        Toast.makeText(this, getString(R.string.zg_toast_config_successful), Toast.LENGTH_LONG).show();
+                        ((VideoTalkApplication) getApplication()).reInitZegoSDK();
+                        finish();
+                    }
+                } catch (Exception e) {
+                    Toast.makeText(this, getString(R.string.zg_toast_config_failure), Toast.LENGTH_LONG).show();
+                }
+            }
+        }
+    }
+
 
     /**
      * Take care of popping the fragment back stack or finishing the activity
@@ -153,10 +157,13 @@ public class SettingsActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+
     public void shareLog(View view) {
         ZegoLogShareActivity.actionStart(this);
 
     }
+
+    boolean shouldReInitSDK = false;
 
     private void goBack() {
 
@@ -213,7 +220,7 @@ public class SettingsActivity extends AppCompatActivity {
         PrefUtil prefUtil = PrefUtil.getInstance();
         final long newAppId = Long.valueOf(strAppId);
         if (newAppId != prefUtil.getAppId() && !TextUtils.equals(strSignKey, prefUtil.getAppSignKey())) {
-            if (mAppFlavorView.getSelectedItemPosition() == 2) {
+            if (mAppFlavorView.getSelectedItemPosition() == 3) {
                 prefUtil.setAppId(newAppId);
                 prefUtil.setAppSignKey(strSignKey);
             }
@@ -302,7 +309,8 @@ public class SettingsActivity extends AppCompatActivity {
         int defaultLevel = PrefUtil.getInstance().getLiveQuality();
 
         mLiveQualityView = (Spinner) findViewById(R.id.sp_resolutions);
-        mLiveQualityView.setSelection(defaultLevel);
+        mLiveQualityView.setSelection(defaultLevel, false);
+
         mLiveQualityView.setOnItemSelectedListener(mItemSelectedListener);
         mResolutionDescView = (TextView) findViewById(R.id.tv_resolution);
         mResolutionView = (CustomSeekBar) findViewById(R.id.sb_resolution);
@@ -345,6 +353,16 @@ public class SettingsActivity extends AppCompatActivity {
         tvDemoVersion = (TextView) findViewById(R.id.tv_demo_version);
         tvDemoVersion.setText(SystemUtil.getAppVersionName(this));
 
+        if (defaultLevel == 6) {
+            mResolutionView.setEnabled(true);
+            mFPSView.setEnabled(true);
+            mBitrateView.setEnabled(true);
+        } else {
+            mResolutionView.setEnabled(false);
+            mFPSView.setEnabled(false);
+            mBitrateView.setEnabled(false);
+        }
+
         TextView sdkVersionView = (TextView) findViewById(R.id.tv_version);
         sdkVersionView.setText(liveRoom.version());
 
@@ -385,13 +403,16 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void changeResolution(int index) {
+
         if (index < ZegoAvConfig.VIDEO_BITRATES.length) {
             int level = index;
             mResolutionView.setProgress(level);
             // 预设级别中,帧率固定为"15"
             mFPSView.setProgress(15);
             mBitrateView.setProgress(ZegoAvConfig.VIDEO_BITRATES[level]);
-
+            if (level == 5) {
+                enableHardwareCodec();
+            }
             mResolutionView.setEnabled(false);
             mFPSView.setEnabled(false);
             mBitrateView.setEnabled(false);
@@ -401,4 +422,89 @@ public class SettingsActivity extends AppCompatActivity {
             mBitrateView.setEnabled(true);
         }
     }
+
+    private void enableHardwareCodec(){
+        if (!mHardwareDecodeView.isChecked() || !mHardwareEncodeView.isChecked()) {
+            mHardwareEncodeView.setChecked(true);
+            mHardwareDecodeView.setChecked(true);
+            Toast.makeText(this, getString(R.string.tips_auto_open_hardware_codec), Toast.LENGTH_LONG).show();
+
+            PrefUtil.getInstance().setHardwareEncode(true);
+
+            PrefUtil.getInstance().setHardwareDecode(true);
+        }
+    }
+
+    private AdapterView.OnItemSelectedListener mItemSelectedListener = new AdapterView.OnItemSelectedListener() {
+
+        /**
+         * <p>Callback method to be invoked when an item in this view has been
+         * selected. This callback is invoked only when the newly selected
+         * position is different from the previously selected position or if
+         * there was no selected item.</p>
+         * <p>
+         * Impelmenters can call getItemAtPosition(position) if they need to access the
+         * data associated with the selected item.
+         *
+         * @param parent   The AdapterView where the selection happened
+         * @param view     The view within the AdapterView that was clicked
+         * @param position The position of the view in the adapter
+         * @param id       The row id of the item that is selected
+         */
+        @Override
+        public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+            switch (parent.getId()) {
+                case R.id.sp_app_flavor:
+                    changeAppFlavor(position);
+                    break;
+
+                case R.id.sp_resolutions:
+                    changeResolution(position);
+                    break;
+            }
+        }
+
+        /**
+         * Callback method to be invoked when the selection disappears from this
+         * view. The selection can disappear for instance when touch is activated
+         * or when the adapter becomes empty.
+         *
+         * @param parent The AdapterView that now contains no selected item.
+         */
+        @Override
+        public void onNothingSelected(AdapterView<?> parent) {
+
+        }
+    };
+
+    private AppCompatSeekBar.OnSeekBarChangeListener mSeekBarChangeListener = new AppCompatSeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            switch (seekBar.getId()) {
+                case R.id.sb_resolution:
+                    mResolutionDescView.setText(getString(R.string.resolution_prefix, mResolutionText[progress]));
+                    if (seekBar.isPressed() && progress == 5) {
+                        enableHardwareCodec();
+                    }
+                    break;
+
+                case R.id.sb_fps:
+                    mFPSDescView.setText(getString(R.string.fps_prefix, progress + ""));
+                    break;
+
+                case R.id.sb_bitrate:
+                    mBitrateDescView.setText(getString(R.string.bitrate_prefix, ByteSizeUnit.toHumanString(progress, ByteSizeUnit.RADIX_TYPE.K, 2)) + "ps");
+                    break;
+            }
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+
+        }
+    };
 }

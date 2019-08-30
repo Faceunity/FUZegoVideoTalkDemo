@@ -1,74 +1,103 @@
 package com.zego.videotalk.ui.activities;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.app.Service;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SimpleItemAnimator;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Surface;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.faceunity.FURenderer;
-import com.faceunity.ui.BeautyControlView;
+import com.faceunity.beautycontrolview.BeautyControlView;
+import com.faceunity.beautycontrolview.FURenderer;
 import com.zego.videotalk.R;
 import com.zego.videotalk.VideoTalkApplication;
 import com.zego.videotalk.ZegoAppHelper;
 import com.zego.videotalk.adapter.VideoLiveViewAdapter;
 import com.zego.videotalk.ui.widgets.VideoLiveView;
 import com.zego.videotalk.utils.AppLogger;
+import com.zego.videotalk.utils.EntityConversion;
 import com.zego.videotalk.utils.PrefUtil;
+import com.zego.videotalk.utils.PreferenceUtil;
+import com.zego.videotalk.utils.SystemUtil;
 import com.zego.videotalk.utils.TimeUtil;
 import com.zego.zegoliveroom.ZegoLiveRoom;
 import com.zego.zegoliveroom.callback.IZegoLivePlayerCallback;
 import com.zego.zegoliveroom.callback.IZegoLivePublisherCallback;
 import com.zego.zegoliveroom.callback.IZegoLoginCompletionCallback;
 import com.zego.zegoliveroom.callback.IZegoRoomCallback;
+import com.zego.zegoliveroom.constants.ZegoAvConfig;
 import com.zego.zegoliveroom.constants.ZegoConstants;
 import com.zego.zegoliveroom.constants.ZegoVideoViewMode;
 import com.zego.zegoliveroom.entity.AuxData;
+import com.zego.zegoliveroom.entity.ZegoPlayStreamQuality;
+import com.zego.zegoliveroom.entity.ZegoPublishStreamQuality;
 import com.zego.zegoliveroom.entity.ZegoStreamInfo;
-import com.zego.zegoliveroom.entity.ZegoStreamQuality;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 public class VideoTalkActivity extends AppCompatActivity implements FURenderer.OnTrackingStatusChangedListener {
-    private static final String TAG = "VideoTalkActivity";
     private VideoLiveView mBigVideoLiveView;
-    private GridView mVideoLiveViewGrid;
+    private RecyclerView mVideoLiveViewGrid;
     private VideoLiveViewAdapter videoLiveViewAdapter;
     private String mPublishStreamId = "";
     private boolean mIsLoginRoom;   // 是否正在登录房间
     private boolean mHasLoginRoom;  // 是否已成功登录房间
     private int mPosition; //当前切换的视频下标记录
     private boolean isCamera = false;
+
     private FURenderer mFURenderer;
     private TextView mTextView;
+    private BeautyControlView beautyControlView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_video_talk);
+        beautyControlView = (BeautyControlView) findViewById(R.id.faceunity_control);
+        mTextView = (TextView) findViewById(R.id.tv_track_text);
         // 禁止手机休眠
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        BeautyControlView beautyControlView = (BeautyControlView) findViewById(R.id.faceunity_control);
-        mFURenderer = VideoTalkApplication.getAppContext().getFURenderer();
-        mFURenderer.setOnTrackingStatusChangedListener(VideoTalkActivity.this);
-        beautyControlView.setOnFUControlListener(mFURenderer);
-        mTextView = (TextView) findViewById(R.id.tv_track_text);
-
+        int orientation = getIntent().getIntExtra("orientation", 0);
+        if (orientation == Surface.ROTATION_0 || orientation == Surface.ROTATION_180) {
+            setRequestedOrientation(orientation == Surface.ROTATION_0 ? ActivityInfo.SCREEN_ORIENTATION_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT);
+        } else {
+            setRequestedOrientation(orientation == Surface.ROTATION_90 ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
+        }
+        // 获取屏幕比例
+        boolean proportion = SystemUtil.getResolutionProportion(this);
+        ZegoAvConfig config = VideoTalkApplication.getAppContext().config;
+        if ((proportion && config.getVideoCaptureResolutionWidth() < config.getVideoCaptureResolutionHeight()) ||
+                (!proportion && config.getVideoCaptureResolutionWidth() > config.getVideoCaptureResolutionHeight())) {
+            // 如果不为横屏比例, 则切换分辨率
+            int height = config.getVideoCaptureResolutionWidth();
+            int width = config.getVideoCaptureResolutionHeight();
+            config.setVideoEncodeResolution(width, height);
+            config.setVideoCaptureResolution(width, height);
+            ZegoAppHelper.getLiveRoom().setAVConfig(config);
+        }
         initCtrls();
 
         if (savedInstanceState != null) {
@@ -79,6 +108,62 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
             loginRoom();
         }
 
+        initFURender();
+        initPhoneCallingListener();
+    }
+
+    private void initFURender() {
+        mFURenderer = VideoTalkApplication.getAppContext().getFURenderer();
+        if (mFURenderer == null) {
+            beautyControlView.setVisibility(View.GONE);
+        } else {
+            mFURenderer.setOnTrackingStatusChangedListener(VideoTalkActivity.this);
+            beautyControlView.setOnFaceUnityControlListener(mFURenderer);
+            mFURenderer = new FURenderer.Builder(this).inputTextureType(1).build();
+        }
+    }
+
+
+    protected PhoneStateListener mPhoneStateListener = null;
+    protected boolean mHostHasBeenCalled = false;
+
+    /**
+     * 电话状态监听.
+     */
+    protected void initPhoneCallingListener() {
+        mPhoneStateListener = new PhoneStateListener() {
+            @Override
+            public void onCallStateChanged(int state, String incomingNumber) {
+                super.onCallStateChanged(state, incomingNumber);
+                switch (state) {
+                    case TelephonyManager.CALL_STATE_IDLE:
+                        if (mHostHasBeenCalled) {
+                            mHostHasBeenCalled = false;
+
+                            //收到PhoneStateManager回调的 TelephonyManager.CALL_STATE_IDLE 事件时，可能系统的设备还未释放完毕，需要延迟2s再调用mZegoLiveRoom.resumeModule(ZegoConstants.ModuleType.AUDIO)
+                            getWindow().getDecorView().postDelayed(new Runnable() {
+                                public void run() {
+                                    ZegoAppHelper.getLiveRoom().resumeModule(ZegoConstants.ModuleType.AUDIO);
+                                }
+                            }, 2000);
+                        }
+
+                        break;
+                    case TelephonyManager.CALL_STATE_RINGING:
+
+                        mHostHasBeenCalled = true;
+                        // 来电，暂停音频模块
+                        ZegoAppHelper.getLiveRoom().pauseModule(ZegoConstants.ModuleType.AUDIO);
+                        break;
+
+                    case TelephonyManager.CALL_STATE_OFFHOOK:
+                        break;
+                }
+            }
+        };
+
+        TelephonyManager tm = (TelephonyManager) getSystemService(Service.TELEPHONY_SERVICE);
+        tm.listen(mPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
     }
 
     /**
@@ -132,36 +217,51 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
         closeBtn.setOnClickListener(clickListener);
 
         mBigVideoLiveView = (VideoLiveView) findViewById(R.id.vt_big_video_window);
-        mVideoLiveViewGrid = (GridView) findViewById(R.id.vt_normal_video_window_set);
-        videoLiveViewAdapter = new VideoLiveViewAdapter(VideoTalkActivity.this);
+        mVideoLiveViewGrid = (RecyclerView) findViewById(R.id.vt_normal_video_window_set);
+        videoLiveViewAdapter = new VideoLiveViewAdapter(this);
+        //设置Item增加、移除动画
+        mVideoLiveViewGrid.setItemAnimator(new DefaultItemAnimator());
+
+        ((SimpleItemAnimator) mVideoLiveViewGrid.getItemAnimator()).setSupportsChangeAnimations(false);
+        mVideoLiveViewGrid.getItemAnimator().setChangeDuration(0);
+        videoLiveViewAdapter.setHasStableIds(true);
         mVideoLiveViewGrid.setAdapter(videoLiveViewAdapter);
-        mVideoLiveViewGrid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+        videoLiveViewAdapter.setOnItemClickListener(new VideoLiveViewAdapter.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                exchangeViewToFullScreen(parent, position);
+            public void onItemClick(View v, int position) {
+                exchangeViewToFullScreen(position);
             }
         });
+        //设置布局管理器
+        mVideoLiveViewGrid.setLayoutManager(new GridLayoutManager(this, 4));
+
     }
 
 
-    private void exchangeViewToFullScreen(AdapterView<?> adapterView, int position) {
-        VideoLiveViewAdapter adapter = (VideoLiveViewAdapter) adapterView.getAdapter();
+    private void exchangeViewToFullScreen(int position) {
+        VideoLiveViewAdapter adapter = videoLiveViewAdapter;
 
         ZegoStreamInfo streamInfo = (ZegoStreamInfo) adapter.getItem(position);
-        if (TextUtils.isEmpty(streamInfo.streamID))
-            return;     // is stub view
+        if (TextUtils.isEmpty(streamInfo.streamID)) return;     // is stub view
 
         ZegoStreamInfo bigStreamInfo = (ZegoStreamInfo) mBigVideoLiveView.getTag();
         if (bigStreamInfo != null) {
+            ZegoAppHelper.getLiveRoom().updatePlayView(bigStreamInfo.streamID, null);
+            ZegoAppHelper.getLiveRoom().updatePlayView(streamInfo.streamID, null);
+            ZegoAppHelper.getLiveRoom().setPreviewView(null);
             mPosition = position;
             adapter.replace(bigStreamInfo, position);
             mBigVideoLiveView.setTag(streamInfo);
             mBigVideoLiveView.setStreamID(streamInfo.streamID);
+
         }
+
 
         changeViewLocation(streamInfo);
 
     }
+
 
     private void changeViewLocation(ZegoStreamInfo streamInfo) {
         ZegoLiveRoom liveRoom = ZegoAppHelper.getLiveRoom();
@@ -181,13 +281,11 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
         liveRoom.setZegoLivePublisherCallback(new ZegoLivePublisherCallback());
         liveRoom.setZegoLivePlayerCallback(new ZegoLivePlayerCallback());
         liveRoom.setZegoRoomCallback(new ZegoRoomCallback());
-        ZegoLiveRoom.setTestEnv(true);
     }
 
     private void loginRoom() {
         String sessionId = getIntent().getStringExtra("sessionId");
         String roomName = String.format("From_%s", PrefUtil.getInstance().getUserName());
-        Log.d(TAG, "loginRoom: sessionId:" + sessionId + ", roomName:" + roomName);
         boolean success = ZegoAppHelper.getLiveRoom().loginRoom(sessionId, roomName, ZegoConstants.RoomRole.Audience, new ZegoLgoinCompleteCallback());
         if (success) {
             mIsLoginRoom = true;
@@ -215,7 +313,9 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
         String title = String.format("%s is comming", PrefUtil.getInstance().getUserId());
 
         ZegoLiveRoom liveRoom = ZegoAppHelper.getLiveRoom();
-
+        // 推流前判断屏幕朝向
+        int currentOrientation = getWindowManager().getDefaultDisplay().getRotation();
+        liveRoom.setAppOrientation(currentOrientation);
         // 开启自动流量监控
         int properties = ZegoConstants.ZegoTrafficControlProperty.ZEGOAPI_TRAFFIC_FPS
                 | ZegoConstants.ZegoTrafficControlProperty.ZEGOAPI_TRAFFIC_RESOLUTION;
@@ -258,7 +358,7 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
         liveRoom.startPlayingStream(streamId, null);
         VideoLiveViewAdapter adapter = (VideoLiveViewAdapter) mVideoLiveViewGrid.getAdapter();
         adapter.addStream(streamInfo);
-        liveRoom.activateVedioPlayStream(streamId, true, ZegoConstants.VideoStreamLayer.VideoStreamLayer_Auto);
+        liveRoom.activateVideoPlayStream(streamId, true, ZegoConstants.VideoStreamLayer.VideoStreamLayer_Auto);
         AppLogger.getInstance().writeLog("Start play stream: %s", streamId);
     }
 
@@ -327,10 +427,10 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
     public void exchangeOthersViewToFullScreen() {
         //有多条流的情况下 ,大视图是我自己的情况下, 替换第一条流为大视图mPublishStreamId
 
-        VideoLiveViewAdapter adapter = (VideoLiveViewAdapter) mVideoLiveViewGrid.getAdapter();
+        VideoLiveViewAdapter adapter = videoLiveViewAdapter;
         List<ZegoStreamInfo> zegoStreamInfoList = adapter.getCurrentList();
         if (zegoStreamInfoList.size() >= 1 && mPublishStreamId != null && mPublishStreamId.equals(mBigVideoLiveView.getStreamID())) {
-            exchangeViewToFullScreen(mVideoLiveViewGrid, 0);
+            exchangeViewToFullScreen(0);
         }
     }
 
@@ -343,7 +443,6 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
             }
         });
     }
-
 
     private class ButtonClickListener implements View.OnClickListener {
         /**
@@ -390,6 +489,7 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
                 case R.id.vt_btn_close: {
                     onBackPressed();
                 }
+                break;
 
                 case R.id.vt_btn_front_camera: {
                     if (isCamera) {
@@ -399,12 +499,12 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
                         isCamera = true;
                         liveRoom.setFrontCam(isCamera);
                     }
-                    mFURenderer.onCameraChange(isCamera ? Camera.CameraInfo.CAMERA_FACING_FRONT :
-                            Camera.CameraInfo.CAMERA_FACING_BACK, 0);
+                    if (mFURenderer != null)
+                        mFURenderer.onCameraChange(isCamera ? Camera.CameraInfo.CAMERA_FACING_BACK :
+                                Camera.CameraInfo.CAMERA_FACING_FRONT, 0);
                 }
 
                 break;
-                default:
             }
         }
     }
@@ -416,8 +516,7 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
 
             AppLogger.getInstance().writeLog("onLoginCompletion, code: %d, has stream ? %s", errorCode, (streamList != null && streamList.length > 0));
 
-            if (isFinishing())
-                return;
+            if (isFinishing()) return;
 
             if (errorCode != 0) {
                 Toast.makeText(VideoTalkActivity.this, getString(R.string.vt_toast_login_failed, errorCode), Toast.LENGTH_LONG).show();
@@ -510,14 +609,19 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
         /**
          * 拉流质量更新
          */
+        @SuppressLint("StringFormatMatches")
         @Override
-        public void onPlayQualityUpdate(String streamId, ZegoStreamQuality zegoStreamQuality) {
+        public void onPlayQualityUpdate(String streamId, ZegoPlayStreamQuality zegoPlayStreamQuality) {
+
+            VideoLiveViewAdapter.CommonStreamQuality commonStreamQuality = EntityConversion.playQualityToCommonStreamQuality(zegoPlayStreamQuality);
+
             //TODO
-//            videoLiveViewAdapter.onPlayQualityUpdate(streamId, zegoStreamQuality);
-//            if (streamId != null && streamId.equals(mBigVideoLiveView.getStreamID())) {
-//                mBigVideoLiveView.setLiveQuality(zegoStreamQuality.quality, zegoStreamQuality.videoFPS, zegoStreamQuality.videoBitrate, zegoStreamQuality.rtt, zegoStreamQuality.pktLostRate);
-//            }
-            Log.e(TAG, getString(R.string.vt_live_quality_fps_and_bitrate, zegoStreamQuality.videoFPS, zegoStreamQuality.videoBitrate, zegoStreamQuality.rtt, zegoStreamQuality.pktLostRate));
+            videoLiveViewAdapter.onPlayQualityUpdate(streamId, commonStreamQuality);
+            mBigVideoLiveView.setDecoderFormat(zegoPlayStreamQuality.isHardwareVdec);
+            if (streamId != null && streamId.equals(mBigVideoLiveView.getStreamID())) {
+                mBigVideoLiveView.setLiveQuality(zegoPlayStreamQuality.quality, commonStreamQuality.videoFps, commonStreamQuality.vkbps, commonStreamQuality.rtt, commonStreamQuality.pktLostRate);
+            }
+            Log.e("setLiveQuality", getString(R.string.vt_live_quality_fps_and_bitrate, commonStreamQuality.videoFps, commonStreamQuality.vkbps, commonStreamQuality.rtt, commonStreamQuality.pktLostRate));
 
         }
 
@@ -566,17 +670,20 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
         /**
          * 推流质量更新
          */
+        @SuppressLint("StringFormatMatches")
         @Override
-        public void onPublishQualityUpdate(String streamId, ZegoStreamQuality zegoStreamQuality) {
-            //TODO
+        public void onPublishQualityUpdate(String streamID, ZegoPublishStreamQuality streamQuality) {
 
-//            if (streamId != null) {
-//                videoLiveViewAdapter.onPlayQualityUpdate(streamId, zegoStreamQuality);
-//                if (streamId.equals(mBigVideoLiveView.getStreamID())) {
-//                    mBigVideoLiveView.setLiveQuality(zegoStreamQuality.quality, zegoStreamQuality.videoFPS, zegoStreamQuality.videoBitrate, zegoStreamQuality.rtt, zegoStreamQuality.pktLostRate);
-//                }
-//            }
-            Log.e(TAG, getString(R.string.vt_live_quality_fps_and_bitrate, zegoStreamQuality.videoFPS, zegoStreamQuality.videoBitrate, zegoStreamQuality.rtt, zegoStreamQuality.pktLostRate));
+            VideoLiveViewAdapter.CommonStreamQuality commonStreamQuality = EntityConversion.publishQualityToCommonStreamQuality(streamQuality);
+            if (streamID != null) {
+                videoLiveViewAdapter.onPlayQualityUpdate(streamID, commonStreamQuality);
+                mBigVideoLiveView.setEncoderFormat(streamQuality.isHardwareVenc);
+
+                if (streamID.equals(mBigVideoLiveView.getStreamID())) {
+                    mBigVideoLiveView.setLiveQuality(commonStreamQuality.quality, commonStreamQuality.videoFps, commonStreamQuality.vkbps, commonStreamQuality.rtt, commonStreamQuality.pktLostRate);
+                }
+            }
+            Log.e("PublishSetLiveQuality", getString(R.string.vt_live_quality_fps_and_bitrate, commonStreamQuality.videoFps, commonStreamQuality.vkbps, commonStreamQuality.rtt, commonStreamQuality.pktLostRate));
 
         }
 
@@ -593,6 +700,7 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
          */
         @Override
         public void onCaptureVideoSizeChangedTo(int width, int height) {
+
         }
 
         /**
@@ -601,6 +709,11 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
         @Override
         public void onMixStreamConfigUpdate(int stateCode, String
                 mixStreamId, HashMap<String, Object> streamInfo) {
+
+        }
+
+        @Override
+        public void onCaptureVideoFirstFrame() {
 
         }
     }

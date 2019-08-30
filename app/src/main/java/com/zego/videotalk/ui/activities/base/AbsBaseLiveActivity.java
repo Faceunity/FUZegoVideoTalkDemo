@@ -7,6 +7,10 @@ import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.view.WindowManager;
 
+
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedList;
 
 import butterknife.ButterKnife;
@@ -54,7 +58,6 @@ public abstract class AbsBaseLiveActivity extends AppCompatActivity {
 
     /**
      * Handler 处理类，当子类需要处理 mHandler 的消息时，可以重写此方法
-     *
      * @return 处理
      */
     protected Handler.Callback getHandlerCallback() {
@@ -81,6 +84,7 @@ public abstract class AbsBaseLiveActivity extends AppCompatActivity {
     }
 
 
+
     /**
      * 初始化基类中的变量.
      */
@@ -90,6 +94,7 @@ public abstract class AbsBaseLiveActivity extends AppCompatActivity {
         mProgressDialog = new ProgressDialog(this);
         mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
     }
+
 
 
 }

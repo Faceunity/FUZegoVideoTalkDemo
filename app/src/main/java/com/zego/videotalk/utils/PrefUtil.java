@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.util.Base64;
+import android.view.View;
 
 import com.zego.videotalk.VideoTalkApplication;
 import com.zego.zegoliveroom.constants.ZegoAvConfig;
@@ -32,6 +33,9 @@ public class PrefUtil {
     static private String ZEGO_APP_WEB_RTC = "zego_app_web_rtc";
     static private String KEY_SDK_APP_ID = "_zego_app_id";
     static private String KEY_SDK_APP_SIGN_KEY = "_zego_app_sign_key";
+    static private String ZEGO_SDK_APP_BUSINESS_TYPE = "_zego_app_business_type";
+
+    static private String ZEGO_APP_INTERNATIONAL = "zego_app_international";
 
     static private String KEY_LIVE_QUALITY = "_zego_live_quality_index";
     static private String KEY_LIVE_QUALITY_RESOLUTION = "_zego_live_resolution";
@@ -43,12 +47,11 @@ public class PrefUtil {
     static private String KEY_HARDWARE_DECODE = "_zego_hardware_decode";
 
     static private String KEY_LOG_DATA = "_zego_log_data";
-    static private String VIDEO_CODEC = "VIDEO_CODEC";
+
     private SharedPreferences mPref;
-    private HashMap<Integer, SharedPreferences.OnSharedPreferenceChangeListener> mLogListeners;
 
     private PrefUtil() {
-        mPref = VideoTalkApplication.getAppContext().getSharedPreferences("__global_pref", Context.MODE_PRIVATE);
+        mPref = VideoTalkApplication.getAppContext().getSharedPreferences("__global_pref_v3", Context.MODE_PRIVATE);
     }
 
     static public PrefUtil getInstance() {
@@ -168,66 +171,6 @@ public class PrefUtil {
         setString(KEY_SDK_APP_SIGN_KEY, appSignKey);
     }
 
-    public void setAppFlavor(int appFlavorIndex) {
-        setInt(KEY_APP_FLAVOR, appFlavorIndex);
-    }
-
-    public int getCurrentAppFlavor() {
-        return mPref.getInt(KEY_APP_FLAVOR, 0);
-    }
-
-    public int getLiveQuality() {
-        return mPref.getInt(KEY_LIVE_QUALITY, ZegoAvConfig.Level.High);
-    }
-
-    public void setLiveQuality(int liveQualityIndex) {
-        setInt(KEY_LIVE_QUALITY, liveQualityIndex);
-    }
-
-    public int getLiveQualityResolution() {
-        return mPref.getInt(KEY_LIVE_QUALITY_RESOLUTION, ZegoAvConfig.Level.High);
-    }
-
-    public void setLiveQualityResolution(int resolutionIndex) {
-        setInt(KEY_LIVE_QUALITY_RESOLUTION, resolutionIndex);
-    }
-
-    public int getLiveQualityFps() {
-        return mPref.getInt(KEY_LIVE_QUALITY_FPS, 15);
-    }
-
-    public void setLiveQualityFps(int fps) {
-        setInt(KEY_LIVE_QUALITY_FPS, fps);
-    }
-
-    public int getLiveQualityBitrate() {
-        return mPref.getInt(KEY_LIVE_QUALITY_BITRATE, 600);
-    }
-
-    public void setLiveQualityBitrate(int bitrate) {
-        setInt(KEY_LIVE_QUALITY_BITRATE, bitrate);
-    }
-
-    public boolean getHardwareEncode() {
-        return mPref.getBoolean(KEY_HARDWARE_ENCODE, true);
-    }
-
-    public void setHardwareEncode(boolean value) {
-        setBoolean(KEY_HARDWARE_ENCODE, value);
-    }
-
-    public boolean getHardwareDecode() {
-        return mPref.getBoolean(KEY_HARDWARE_DECODE, true);
-    }
-
-    public void setHardwareDecode(boolean value) {
-        setBoolean(KEY_HARDWARE_DECODE, value);
-    }
-
-    public Object getLogData() {
-        return getObject(KEY_LOG_DATA);
-    }
-
     public void setLogData(Object logData) {
         if (logData == null) {
             setString(KEY_LOG_DATA, "");
@@ -236,12 +179,72 @@ public class PrefUtil {
         }
     }
 
-    public synchronized void registerLogChangeListener(final OnLogChangeListener listener) {
-        if (listener == null)
-            return;
+    public void setAppFlavor(int appFlavorIndex) {
+        setInt(KEY_APP_FLAVOR, appFlavorIndex);
+    }
 
-        if (mLogListeners == null)
-            mLogListeners = new HashMap<>();
+    public int getCurrentAppFlavor() {
+        return mPref.getInt(KEY_APP_FLAVOR, 0);
+    }
+
+    public void setLiveQuality(int liveQualityIndex) {
+        setInt(KEY_LIVE_QUALITY, liveQualityIndex);
+    }
+
+    public int getLiveQuality() {
+        return mPref.getInt(KEY_LIVE_QUALITY, ZegoAvConfig.Level.High);
+    }
+
+    public void setLiveQualityResolution(int resolutionIndex) {
+        setInt(KEY_LIVE_QUALITY_RESOLUTION, resolutionIndex);
+    }
+
+    public int getLiveQualityResolution() {
+        return mPref.getInt(KEY_LIVE_QUALITY_RESOLUTION, ZegoAvConfig.Level.High);
+    }
+
+    public void setLiveQualityFps(int fps) {
+        setInt(KEY_LIVE_QUALITY_FPS, fps);
+    }
+
+    public int getLiveQualityFps() {
+        return mPref.getInt(KEY_LIVE_QUALITY_FPS, 15);
+    }
+
+    public void setLiveQualityBitrate(int bitrate) {
+        setInt(KEY_LIVE_QUALITY_BITRATE, bitrate);
+    }
+
+    public int getLiveQualityBitrate() {
+        return mPref.getInt(KEY_LIVE_QUALITY_BITRATE, 600);
+    }
+
+    public void setHardwareEncode(boolean value) {
+        setBoolean(KEY_HARDWARE_ENCODE, value);
+    }
+
+    public boolean getHardwareEncode() {
+        return mPref.getBoolean(KEY_HARDWARE_ENCODE, false);
+    }
+
+    public void setHardwareDecode(boolean value) {
+        setBoolean(KEY_HARDWARE_DECODE, value);
+    }
+
+    public boolean getHardwareDecode() {
+        return mPref.getBoolean(KEY_HARDWARE_DECODE, false);
+    }
+
+    public Object getLogData() {
+        return getObject(KEY_LOG_DATA);
+    }
+
+    private HashMap<Integer, SharedPreferences.OnSharedPreferenceChangeListener> mLogListeners;
+
+    public synchronized void registerLogChangeListener(final OnLogChangeListener listener) {
+        if (listener == null) return;
+
+        if (mLogListeners == null) mLogListeners = new HashMap<>();
         SharedPreferences.OnSharedPreferenceChangeListener _listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
 
             @Override
@@ -256,23 +259,18 @@ public class PrefUtil {
     }
 
     public synchronized void unregisterLogChangeListener(OnLogChangeListener listener) {
-        if (listener == null || mLogListeners == null)
-            return;
+        if (listener == null || mLogListeners == null) return;
 
         SharedPreferences.OnSharedPreferenceChangeListener _listener = mLogListeners.get(listener.hashCode());
         mPref.unregisterOnSharedPreferenceChangeListener(_listener);
-    }
-
-    public boolean getAppWebRtc() {
-        return mPref.getBoolean(ZEGO_APP_WEB_RTC, false);
     }
 
     public void setAppWebRtc(boolean v) {
         setBoolean(ZEGO_APP_WEB_RTC, v);
     }
 
-    public boolean getTestEncode() {
-        return mPref.getBoolean(KEY_TEST_ENCODE, false);
+    public boolean getAppWebRtc() {
+        return mPref.getBoolean(ZEGO_APP_WEB_RTC, false);
     }
 
     public void setTestEncode(boolean testEncode) {
@@ -280,12 +278,31 @@ public class PrefUtil {
         setBoolean(KEY_TEST_ENCODE, testEncode);
     }
 
+    public boolean getTestEncode() {
+        return mPref.getBoolean(KEY_TEST_ENCODE, true);
+    }
+
+    static private String VIDEO_CODEC = "VIDEO_CODEC";
+
+
     public int getLayeredCoding() {
         return mPref.getInt(VIDEO_CODEC, 0);
     }
 
     public void setLayeredCoding(int videoCodec) {
         setInt(VIDEO_CODEC, videoCodec);
+    }
+
+    public void setBusinessType(int businessType) {
+        setInt(ZEGO_SDK_APP_BUSINESS_TYPE, businessType);
+    }
+
+    public void setInternational(boolean international) {
+        setBoolean(ZEGO_APP_INTERNATIONAL, international);
+    }
+
+    public int getBusinessType() {
+        return mPref.getInt(ZEGO_SDK_APP_BUSINESS_TYPE, 0);
     }
 
     public interface OnLogChangeListener {

@@ -1,11 +1,14 @@
 package com.zego.videotalk.utils;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.util.DisplayMetrics;
 
 import com.zego.videotalk.R;
+
 
 /**
  * Copyright © 2016 Zego. All rights reserved.
@@ -38,5 +41,33 @@ public class SystemUtil {
         String finalInfo = oriInfo.toString().replaceAll(",", ".");
 
         return finalInfo;
+    }
+
+    public static boolean isDebugVersion(Context context) {
+        try {
+            ApplicationInfo info = context.getApplicationInfo();
+            return (info.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * 获取屏幕分辨率比例
+     *
+     * @param context
+     * @return 返回true 为横屏比例, 返回false 为竖屏比例
+     */
+    static public boolean getResolutionProportion(Context context) {
+
+        // 获取屏幕分辨率. 判断屏幕比例
+        DisplayMetrics dm = context.getResources().getDisplayMetrics();
+        int width = dm.widthPixels;
+        int height = dm.heightPixels;
+        if (width > height) {
+            return true;
+        }
+        return false;
     }
 }

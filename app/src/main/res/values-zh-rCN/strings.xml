@@ -22,6 +22,13 @@
     <string name="vt_live_quality_fps_and_bitrate">&#160;帧率:<xliff:g id="fps">%1$.2f</xliff:g>;&#160;比特率:<xliff:g id="bitrate">%2$.2f</xliff:g>Kb/s;&#160;延时:<xliff:g id="rtt">%3$s</xliff:g>ms;&#160;丢包率:<xliff:g id="pktlostrate">%4$s</xliff:g>%%</string>
     <string name="vt_hint_none_data">无数据</string>
 
+    <string name="zg_scan_qr_code">扫描二维码</string>
+    <string name="zg_scan_qr_code_setting">扫码设置</string>
+    <string name="zg_scan_qr_code_setting_text">通过扫描二维码快速完成是设置</string>
+
+    <string name="zg_toast_config_successful">配置成功</string>
+    <string name="zg_toast_config_failure">配置失败</string>
+
     <string name="vt_live_quality_excellent">优</string>
     <string name="vt_live_quality_good">良</string>
     <string name="vt_live_quality_medium">中</string>
@@ -55,9 +62,6 @@
     <string name="zg_text_resolution_type_Highest">特高质量</string>
     <string name="zg_text_resolution_type_Customize">自定义</string>
 
-    <string name="zg_checkbox_use_hardware_encode">硬件编码</string>
-    <string name="zg_checkbox_use_hardware_decode">硬件解码</string>
-
     <string name="resolution_prefix">分辨率&#160;<xliff:g id="value">%1$s</xliff:g></string>
     <string name="fps_prefix">帧率&#160;<xliff:g id="value">%1$s</xliff:g></string>
     <string name="bitrate_prefix">码率&#160;<xliff:g id="value">%1$s</xliff:g></string>
@@ -73,4 +77,11 @@
     <string name="back">返回</string>
     <string name="log">日志</string>
     <string name="share">分享</string>
+
+    <string name="hardware_encode">硬件编码</string>
+    <string name="hardware_decode">硬件解码</string>
+    <string name="software_encode">软件编码</string>
+    <string name="software_decode">软件解码</string>
+
+    <string name="tips_auto_open_hardware_codec">1080P 分辨率已打开硬件编解码, 可手动关闭!</string>
 </resources>

@@ -25,33 +25,55 @@ import com.zego.zegoliveroom.constants.ZegoVideoViewMode;
  */
 public class VideoLiveView extends RelativeLayout {
 
-    public String streamID;
     /**
      * 推拉流颜色.
      */
     private TextView mTvQualityColor;
+
     /**
      * 推拉流质量.
      */
     private TextView mTvQuality;
+
     /**
      * 全屏.
      */
     private TextView mTvSwitchToFullScreen;
+
     /**
      * 分享.
      */
     private TextView mTvShare;
+
+    /**
+     * 编码方式
+     */
+    private TextView mTvEncoder;
+
+    /**
+     * 解码方式
+     */
+    private TextView mTvDecoder;
+
     /**
      * 用于渲染视频.
      */
     private TextureView mTextureView;
+
     private int[] mArrColor;
+
     private String[] mArrLiveQuality;
+
     private Resources mResources;
+
     private View mRootView;
+
     private ZegoLiveRoom mZegoLiveRoom = null;
+
     private Activity mActivityHost = null;
+
+    public String streamID;
+
     /**
      * 推拉流质量.
      */
@@ -125,6 +147,10 @@ public class VideoLiveView extends RelativeLayout {
             if (mIsBigView) {
                 mRootView = LayoutInflater.from(context).inflate(R.layout.vt_widget_live_view_big, this);
 
+                // 初始化编码解码TextView
+                mTvEncoder = mRootView.findViewById(R.id.tv_encoder);
+                mTvDecoder = mRootView.findViewById(R.id.tv_decoder);
+
                 mTvSwitchToFullScreen = (TextView) mRootView.findViewById(R.id.tv_switch_full_screen);
                 mTvSwitchToFullScreen.setOnClickListener(new OnClickListener() {
                     @Override
@@ -174,11 +200,42 @@ public class VideoLiveView extends RelativeLayout {
         return TextUtils.isEmpty(mStreamID);
     }
 
+    /**
+     * 设置播放质量.
+     */
+    public void setLiveQuality(int quality) {
+        if (quality >= 0 && quality <= 3) {
+            mLiveQuality = quality;
+            mTvQualityColor.setBackgroundResource(mArrColor[quality]);
+        }
+    }
+
     @SuppressLint("StringFormatMatches")
     public void setLiveQuality(int quality, double videoFPS, double videoBitrate, int videoRtt, int videoPktLostRate) {
-        //setLiveQuality(quality);
-        // mTvQuality.setText(mResources.getString(R.string.vt_live_quality_fps_and_bitrate, videoFPS, videoBitrate, videoRtt, videoPktLostRate));
+        setLiveQuality(quality);
+        mTvQuality.setText(mResources.getString(R.string.vt_live_quality_fps_and_bitrate, videoFPS, videoBitrate, videoRtt, videoPktLostRate));
     }
+
+    /**
+     * 设置当前的编码形式
+     * @param isHardware 是否硬件编码
+     */
+    public void setEncoderFormat(boolean isHardware) {
+        if (mIsBigView) {
+            mTvEncoder.setText(isHardware ? R.string.hardware_encode : R.string.software_encode);
+        }
+    }
+
+    /**
+     * 设置当前的解码形式
+     * @param isHardware 是否硬件解码
+     */
+    public void setDecoderFormat(boolean isHardware) {
+        if (mIsBigView) {
+            mTvDecoder.setText(isHardware ? R.string.hardware_decode : R.string.software_decode);
+        }
+    }
+
 
     /**
      * 设置mode.
@@ -208,17 +265,6 @@ public class VideoLiveView extends RelativeLayout {
         return mLiveQuality;
     }
 
-    /**
-     * 设置播放质量.
-     */
-    public void setLiveQuality(int quality) {
-        if (quality >= 0 && quality <= 3) {
-            mLiveQuality = quality;
-            mTvQualityColor.setBackgroundResource(mArrColor[quality]);
-            mTvQuality.setText(mResources.getString(R.string.vt_live_quality, mArrLiveQuality[quality]));
-        }
-    }
-
     public TextureView getTextureView() {
         return mTextureView;
     }
@@ -231,24 +277,24 @@ public class VideoLiveView extends RelativeLayout {
         return mVideoViewMode;
     }
 
-    public String getStreamID() {
-        return mStreamID;
-    }
-
     public void setStreamID(String streamID) {
         mStreamID = streamID;
+    }
+
+    public String getStreamID() {
+        return mStreamID;
     }
 
     public boolean isPublishView() {
         return mIsPublishView;
     }
 
-    public void setPublishView(boolean publishView) {
-        mIsPublishView = publishView;
-    }
-
     public boolean isPlayView() {
         return mIsPlayView;
+    }
+
+    public void setPublishView(boolean publishView) {
+        mIsPublishView = publishView;
     }
 
     public void setPlayView(boolean playView) {

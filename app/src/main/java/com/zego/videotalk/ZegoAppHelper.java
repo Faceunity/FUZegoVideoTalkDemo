@@ -12,17 +12,21 @@ import com.zego.zegoliveroom.ZegoLiveRoom;
 
 public class ZegoAppHelper {
 
-    static final public long RTMP_APP_ID = 0;
 
-    static final public long UDP_APP_ID = 0;
+    /**
+     * 请提前在即构管理控制台获取 appID 与 appSign
+     * Demo 默认使用 UDP 模式，请填充该模式下的 AppID 与 appSign,其他模式不需要可不用填
+     * AppID 填写样式示例：1234567890l
+     * appSign 填写样式示例：{(byte)0x00,(byte)0x01,(byte)0x02,(byte)0x03}
+     **/
 
-    static final public long INTERNATIONAL_APP_ID = 0;
+    static final public long RTMP_APP_ID = 512257190L;
+    static final public long UDP_APP_ID = 512257190L;
+    static final public long INTERNATIONAL_APP_ID = 512257190L;
 
-    static final private byte[] RTMP_SIGN_KEY = new byte[]{(byte) 0x91};
-
-    static final private byte[] UDP_SIGN_KEY = new byte[]{(byte) 0x1e};
-
-    static final private byte[] INTERNATIONAL_SIGN_KEY = new byte[]{(byte) 0x5d};
+    static final private byte[] RTMP_APP_SIGN = new byte[]{(byte)0x18,(byte)0x64,(byte)0xb9,(byte)0x15,(byte)0x13,(byte)0x61,(byte)0x77,(byte)0xd0,(byte)0xe4,(byte)0x88,(byte)0x9d,(byte)0x1e,(byte)0x07,(byte)0x26,(byte)0xc0,(byte)0x22,(byte)0xb4,(byte)0x6d,(byte)0x5c,(byte)0xfb,(byte)0xb4,(byte)0x06,(byte)0x23,(byte)0xcb,(byte)0x0a,(byte)0x94,(byte)0xf4,(byte)0x73,(byte)0x68,(byte)0xea,(byte)0xae,(byte)0x55};
+    static final private byte[] UDP_APP_SIGN = new byte[]{(byte)0x18,(byte)0x64,(byte)0xb9,(byte)0x15,(byte)0x13,(byte)0x61,(byte)0x77,(byte)0xd0,(byte)0xe4,(byte)0x88,(byte)0x9d,(byte)0x1e,(byte)0x07,(byte)0x26,(byte)0xc0,(byte)0x22,(byte)0xb4,(byte)0x6d,(byte)0x5c,(byte)0xfb,(byte)0xb4,(byte)0x06,(byte)0x23,(byte)0xcb,(byte)0x0a,(byte)0x94,(byte)0xf4,(byte)0x73,(byte)0x68,(byte)0xea,(byte)0xae,(byte)0x55};
+    static final private byte[] INTERNATIONAL_APP_SIGN = new byte[]{(byte)0x18,(byte)0x64,(byte)0xb9,(byte)0x15,(byte)0x13,(byte)0x61,(byte)0x77,(byte)0xd0,(byte)0xe4,(byte)0x88,(byte)0x9d,(byte)0x1e,(byte)0x07,(byte)0x26,(byte)0xc0,(byte)0x22,(byte)0xb4,(byte)0x6d,(byte)0x5c,(byte)0xfb,(byte)0xb4,(byte)0x06,(byte)0x23,(byte)0xcb,(byte)0x0a,(byte)0x94,(byte)0xf4,(byte)0x73,(byte)0x68,(byte)0xea,(byte)0xae,(byte)0x55};
 
     private static ZegoAppHelper sInstance = new ZegoAppHelper();
 
@@ -66,11 +70,11 @@ public class ZegoAppHelper {
 
     static public byte[] requestSignKey(long appId) {
         if (isRtmpProduct(appId)) {
-            return RTMP_SIGN_KEY;
+            return RTMP_APP_SIGN;
         } else if (isUdpProduct(appId)) {
-            return UDP_SIGN_KEY;
+            return UDP_APP_SIGN;
         } else if (isInternationalProduct(appId)) {
-            return INTERNATIONAL_SIGN_KEY;
+            return INTERNATIONAL_APP_SIGN;
         }
         return null;
     }
@@ -79,9 +83,9 @@ public class ZegoAppHelper {
         String appTitle;
         if (appId == 1L) {  // RTMP
             appTitle = "RTMP";
-        } else if (appId == 0) {   // UDP
+        } else if (appId == 1082937486L) {   // UDP
             appTitle = "UDP";
-        } else if (appId == 0) {   // International
+        } else if (appId == 3873208266L) {   // International
             appTitle = "Int'l";
         } else {    // Custom
             appTitle = "Customize";
@@ -89,26 +93,26 @@ public class ZegoAppHelper {
         return appTitle;
     }
 
-    static public String convertSignKey2String(byte[] signKey) {
+    static public String convertSignKey2String(byte[] appSign) {
         StringBuilder buffer = new StringBuilder();
-        for (int b : signKey) {
+        for (int b : appSign) {
             buffer.append("0x").append(Integer.toHexString((b & 0x000000FF) | 0xFFFFFF00).substring(6)).append(",");
         }
         buffer.setLength(buffer.length() - 1);
         return buffer.toString();
     }
 
-    static public byte[] parseSignKeyFromString(String strSignKey) throws NumberFormatException {
-        String[] keys = strSignKey.split(",");
+    static public byte[] parseSignKeyFromString(String strAppSign) throws NumberFormatException {
+        String[] keys = strAppSign.split(",");
         if (keys.length != 32) {
             throw new NumberFormatException("App Sign Key Illegal");
         }
-        byte[] byteSignKey = new byte[32];
+        byte[] byteAppSign = new byte[32];
         for (int i = 0; i < 32; i++) {
             int data = Integer.valueOf(keys[i].trim().replace("0x", ""), 16);
-            byteSignKey[i] = (byte) data;
+            byteAppSign[i] = (byte) data;
         }
-        return byteSignKey;
+        return byteAppSign;
     }
 
     static public void saveLiveRoom(ZegoLiveRoom instance) {

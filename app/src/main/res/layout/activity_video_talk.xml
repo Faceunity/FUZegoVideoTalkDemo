@@ -94,10 +94,10 @@
         android:textSize="18sp"
         android:visibility="invisible" />
 
-    <com.faceunity.beautycontrolview.BeautyControlView
+    <com.faceunity.nama.ui.BeautyControlView
         android:id="@+id/faceunity_control"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/x98"
+        android:layout_height="wrap_content"
         android:layout_alignParentBottom="true" />
 
 

@@ -26,8 +26,8 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.faceunity.beautycontrolview.BeautyControlView;
-import com.faceunity.beautycontrolview.FURenderer;
+import com.faceunity.nama.FURenderer;
+import com.faceunity.nama.ui.BeautyControlView;
 import com.zego.videotalk.R;
 import com.zego.videotalk.VideoTalkApplication;
 import com.zego.videotalk.ZegoAppHelper;
@@ -36,7 +36,6 @@ import com.zego.videotalk.ui.widgets.VideoLiveView;
 import com.zego.videotalk.utils.AppLogger;
 import com.zego.videotalk.utils.EntityConversion;
 import com.zego.videotalk.utils.PrefUtil;
-import com.zego.videotalk.utils.PreferenceUtil;
 import com.zego.videotalk.utils.SystemUtil;
 import com.zego.videotalk.utils.TimeUtil;
 import com.zego.zegoliveroom.ZegoLiveRoom;
@@ -57,6 +56,7 @@ import java.util.HashMap;
 import java.util.List;
 
 public class VideoTalkActivity extends AppCompatActivity implements FURenderer.OnTrackingStatusChangedListener {
+    private static final String TAG = "VideoTalkActivity";
     private VideoLiveView mBigVideoLiveView;
     private RecyclerView mVideoLiveViewGrid;
     private VideoLiveViewAdapter videoLiveViewAdapter;
@@ -64,7 +64,7 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
     private boolean mIsLoginRoom;   // 是否正在登录房间
     private boolean mHasLoginRoom;  // 是否已成功登录房间
     private int mPosition; //当前切换的视频下标记录
-    private boolean isCamera = false;
+    private boolean mIsFrontCamera = true;
 
     private FURenderer mFURenderer;
     private TextView mTextView;
@@ -117,12 +117,9 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
         if (mFURenderer == null) {
             beautyControlView.setVisibility(View.GONE);
         } else {
-            mFURenderer.setOnTrackingStatusChangedListener(VideoTalkActivity.this);
             beautyControlView.setOnFaceUnityControlListener(mFURenderer);
-            mFURenderer = new FURenderer.Builder(this).inputTextureType(1).build();
         }
     }
-
 
     protected PhoneStateListener mPhoneStateListener = null;
     protected boolean mHostHasBeenCalled = false;
@@ -492,19 +489,16 @@ public class VideoTalkActivity extends AppCompatActivity implements FURenderer.O
                 break;
 
                 case R.id.vt_btn_front_camera: {
-                    if (isCamera) {
-                        isCamera = false;
-                        liveRoom.setFrontCam(isCamera);
-                    } else {
-                        isCamera = true;
-                        liveRoom.setFrontCam(isCamera);
+                    mIsFrontCamera = !mIsFrontCamera;
+                    liveRoom.setFrontCam(mIsFrontCamera);
+                    if (mFURenderer != null) {
+                        int cameraType = mIsFrontCamera ? Camera.CameraInfo.CAMERA_FACING_FRONT :
+                                Camera.CameraInfo.CAMERA_FACING_BACK;
+                        mFURenderer.onCameraChanged(cameraType, FURenderer.getCameraOrientation(cameraType));
                     }
-                    if (mFURenderer != null)
-                        mFURenderer.onCameraChange(isCamera ? Camera.CameraInfo.CAMERA_FACING_BACK :
-                                Camera.CameraInfo.CAMERA_FACING_FRONT, 0);
                 }
-
                 break;
+                default:
             }
         }
     }

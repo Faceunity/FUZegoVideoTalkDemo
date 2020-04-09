@@ -1,115 +1,47 @@
-# FuZegoVideoTalkDemo(Android)
+# FuZegoVideoTalkDemo 快速接入文档
 
-## 概述
+FuZegoVideoTalkDemo 是集成了 FaceUnity 美颜道具贴纸功能和 **[即构互动视频](https://doc.zego.im/CN/394.html#2)** 的 Demo。
 
-FuZegoVideoTalkDemo 是集成了 Faceunity 面部跟踪和虚拟道具功能 和 Zego 1V1视频连麦的 Demo。
+本文是 FaceUnity Nama SDK 快速对接即构互动视频的导读说明，SDK 版本为 **6.7.0**。更多关于 SDK 的详细说明，请参看 **[FULiveDemoDroid](https://github.com/Faceunity/FULiveDemoDroid/)**。
 
-## 更新SDK
+## 快速集成方法
 
-[**Nama SDK发布地址**](https://github.com/Faceunity/FULiveDemoDroid/releases),可查看Nama SDK的所有版本和发布说明。
-更新方法为下载Faceunity*.zip解压后替换faceunity模块中的相应库文件。
+### 一、导入 SDK
 
-## SDK使用介绍
+将 faceunity  模块添加到工程中，下面是一些对文件的说明。
 
- - Faceunity SDK的使用方法请参看 [**Faceunity/FULiveDemoDroid**][1]
- - ZEGO平台直播SDK开发文档
+- jniLibs 文件夹下 libnama.so 和 libfuai.so 是人脸跟踪和道具绘制的静态库
+- libs 文件夹下 nama.jar 是供应用层调用的 JNI 接口
+- assets 文件夹下 AI_model/ai_face_processor.bundle 是人脸识别数据包（自 6.6.0 版本起，v3.bundle 不再使用）
+- assets 文件夹下 face_beautification.bundle 是美颜功能数据包
+- assets 文件夹下 normal 中的 \*.bundle 文件是特效贴纸文件，自定义特效贴纸制作的文档和工具，请联系技术支持获取。
 
-## 集成方法
+### 二、使用 SDK
 
-首先添加相应的SDK库文件与数据文件，然后在连麦界面（实时视频demo中VideoTakeActivity）中完成相应Faceunity SDK界面部分代码（界面不作过多的赘述）。
-Zego 提供了两种画面处理的方式，分别是外部采样以及外部滤镜，这里只需了解外部滤镜即可。
+#### 1. 初始化
 
-### 外部滤镜
+在 `FURenderer` 类 的  `initFURenderer` 静态方法是对 FaceUnity SDK 一些全局数据初始化的封装，可以在 Application 中调用，也可以在工作线程调用，仅需初始化一次即可。
 
-#### 环境初始化
+#### 2.创建
 
-##### GL环境初始化
+在 `FURenderer` 类 的  `onSurfaceCreated` 方法是对 FaceUnity SDK 每次使用前数据初始化的封装。
 
-GL线程初始化
+#### 3. 图像处理
 
-```
-mGlThread = new HandlerThread("video-filter");
-mGlThread.start();
-mGlHandler = new Handler(mGlThread.getLooper());
-```
+在 `FURenderer` 类 的  `onDrawFrame` 方法是对 FaceUnity SDK 图像处理方法的封装，该方法有许多重载方法适用于不同的数据类型需求。
 
-GL Context 初始化
+#### 4. 销毁
 
-```
-faceunity.fuCreateEGLContext();
-```
+在 `FURenderer` 类 的  `onSurfaceDestroyed` 方法是对 FaceUnity SDK 数据销毁的封装。
 
-##### Faceunity SDK环境初始化
+#### 5. 切换相机
 
-加载Faceunity SDK所需要的数据文件（读取人脸数据文件、美颜数据文件）：
+调用 `FURenderer` 类 的  `onCameraChange` 方法，用于重新为 SDK 设置参数。
 
-```
-InputStream v3 = context.getAssets().open(BUNDLE_v3);
-byte[] v3Data = new byte[v3.available()];
-v3.read(v3Data);
-v3.close();
-faceunity.fuSetup(v3Data, null, authpack.A());
+上面一系列方法的使用，具体在 demo 中的`VideoFilterSurfaceTexture` 、 `VideoTalkApplication` 类以及 `VideoTalkActivity` 类，请参考该代码示例接入。
 
-/**
- * 加载优化表情跟踪功能所需要加载的动画数据文件anim_model.bundle；
- * 启用该功能可以使表情系数及avatar驱动表情更加自然，减少异常表情、模型缺陷的出现。该功能对性能的影响较小。
- * 启用该功能时，通过 fuLoadAnimModel 加载动画模型数据，加载成功即可启动。该功能会影响通过fuGetFaceInfo获取的expression表情系数，以及通过表情驱动的avatar模型。
- * 适用于使用Animoji和avatar功能的用户，如果不是，可不加载
- */
-InputStream animModel = context.getAssets().open(BUNDLE_anim_model);
-byte[] animModelData = new byte[animModel.available()];
-animModel.read(animModelData);
-animModel.close();
-faceunity.fuLoadAnimModel(animModelData);
+### 三、切换道具及调整美颜参数
 
-/**
- * 加载高精度模式的三维张量数据文件ardata_ex.bundle。
- * 适用于换脸功能，如果没用该功能可不加载；如果使用了换脸功能，必须加载，否则会报错
- */
-InputStream ar = context.getAssets().open(BUNDLE_ardata_ex);
-byte[] arDate = new byte[ar.available()];
-ar.read(arDate);
-ar.close();
-faceunity.fuLoadExtendedARData(arDate);
-```
+`FURenderer` 类实现了 `OnFaceUnityControlListener` 接口，而 `OnFaceUnityControlListener` 接口是对切换贴纸道具及调整美颜参数等一系列操作的封装。在 demo 中，`BeautyControlView` 用于实现用户交互，调用了 `OnFaceUnityControlListener` 的方法实现功能。
 
-#### 实现父类ZegoVideoFilter的虚函数（备注：zego设置外部滤镜必须在初始化sdk的时候设置，在其他地方设置回调会无效）
-
-Zego 是通过 ZegoVideoFilter 类来控制外部滤镜，因此实现父类 ZegoVideoFilter 的虚函数尤为重要。用于ZEGO不支持同时提供纹理以及byte[]数据，因此只能使用faceunity的单输入方式。采用ZEGO的BUFFER_TYPE_ASYNC_I420_MEM模式。
-
-初始化方法的回调，并把Client类给传递过来。
-
-```
-@Override
-protected void allocateAndStart(Client client) {
-    mClient = client;
-    mFURenderer.onSurfaceCreated();
-}
-```
-
-销毁方法的回调
-
-```
-@Override
-protected void stopAndDeAllocate() {
-    mClient.destroy();
-    mClient = null;
-    mFURenderer.onSurfaceDestroyed();
-}
-```
-
-#### 处理图像数据
-
-使用faceunity.fuRenderToI420Image来处理画面数据。
-
-```
-int fuTex = faceunity.fuRenderToTexture(tex, w, h, mFrameId++, mItemsArray, flags);
-```
-
-#### 推流
-
-视频流以纹理ID的形式传给mClient类
-
-```
-mZegoClient.queueInputBuffer(index, pixelBuffer.width, pixelBuffer.height, pixelBuffer.stride, pixelBuffer.timestamp_100n);
-```
+**至此快速集成完毕，关于 FaceUnity SDK 的更多详细说明，请参看 [FULiveDemoDroid](https://github.com/Faceunity/FULiveDemoDroid/)**。

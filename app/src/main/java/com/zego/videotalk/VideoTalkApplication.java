@@ -1,22 +1,20 @@
 package com.zego.videotalk;
 
 import android.app.Application;
+import android.hardware.Camera;
 import android.os.Build;
 import android.text.TextUtils;
 import android.widget.Toast;
 
-import com.faceunity.beautycontrolview.FURenderer;
+import com.faceunity.nama.FURenderer;
 import com.tencent.bugly.crashreport.CrashReport;
 import com.zego.videotalk.ui.widgets.FUVideoFilterFactory;
 import com.zego.videotalk.utils.PrefUtil;
 import com.zego.videotalk.utils.PreferenceUtil;
-import com.zego.videotalk.utils.SystemUtil;
 import com.zego.videotalk.utils.TimeUtil;
 import com.zego.zegoliveroom.ZegoLiveRoom;
 import com.zego.zegoliveroom.constants.ZegoAvConfig;
 import com.zego.zegoliveroom.constants.ZegoConstants;
-
-import static com.zego.zegoliveroom.constants.ZegoConstants.Config.VIDEO_ACCELERATOR_WHITELIST;
 
 
 /**
@@ -33,7 +31,6 @@ public class VideoTalkApplication extends Application {
 
     final static private String BUGLY_APP_KEY = "70580e12bb";
     private FURenderer mFURenderer;
-    private String isOpen;
 
     static public VideoTalkApplication getAppContext() {
         return VideoTalkApplication.sInstance;
@@ -58,14 +55,16 @@ public class VideoTalkApplication extends Application {
 
         initCrashReport();  // second
 
-        isOpen = PreferenceUtil.getString(this, PreferenceUtil.KEY_FACEUNITY_ISON);
+        String isOpen = PreferenceUtil.getString(this, PreferenceUtil.KEY_FACEUNITY_ISON);
         if (TextUtils.isEmpty(isOpen)) {
             isOpen = "false";
         }
-        if (isOpen.equals("true")) {
+        if ("true".equals(isOpen)) {
             FURenderer.initFURenderer(this);
-            mFURenderer = new FURenderer
-                    .Builder(this)
+            mFURenderer = new FURenderer.Builder(this)
+                    .setInputTextureType(FURenderer.INPUT_EXTERNAL_OES_TEXTURE)
+                    .setCameraType(Camera.CameraInfo.CAMERA_FACING_FRONT)
+                    .setInputImageOrientation(FURenderer.getCameraOrientation(Camera.CameraInfo.CAMERA_FACING_FRONT))
                     .build();
         }
         setupZegoSDK();  // last
